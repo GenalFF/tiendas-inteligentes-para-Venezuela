@@ -3,29 +3,30 @@ import pandas as pd
 
 st.set_page_config(page_title="Boutique Inteligente", page_icon="👗", layout="wide")
 
-# ─── BASE DE DATOS SIMULADA (Aquí conectarías Sofi Pro real) ───
+# ─── BASE DE DATOS SIMULADA ───
 if 'inventario' not in st.session_state:
     st.session_state.inventario = pd.DataFrame([
-        {"id": 1, "producto": "Camisa Oversize", "categoria": "Camisas", "precio": 25.0, "costo": 10.0, "stock": 15, "vendidos": 5, "img": "https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=400"},
-        {"id": 2, "producto": "Pantalón Cargo", "categoria": "Pantalones", "precio": 35.0, "costo": 18.0, "stock": 8, "vendidos": 2, "img": "https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?w=400"},
-        {"id": 3, "producto": "Vestido Floral", "categoria": "Vestidos", "precio": 45.0, "costo": 15.0, "stock": 20, "vendidos": 15, "img": "https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?w=400"},
-        {"id": 4, "producto": "Chaqueta Denim", "categoria": "Chaquetas", "precio": 60.0, "costo": 35.0, "stock": 3, "vendidos": 18, "img": "https://images.unsplash.com/photo-1527010152798-8971d2e0881b?w=400"}
+        {"id": 1, "producto": "Camisa Oversize", "precio": 25.0, "costo": 10.0, "stock": 15, "vendidos": 5, "img": "https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=400"},
+        {"id": 2, "producto": "Pantalón Cargo", "precio": 35.0, "costo": 18.0, "stock": 8, "vendidos": 2, "img": "https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?w=400"},
+        {"id": 3, "producto": "Vestido Floral", "precio": 45.0, "costo": 15.0, "stock": 20, "vendidos": 15, "img": "https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?w=400"}
     ])
 
 df = st.session_state.inventario
 
 # ─── INTERFAZ PRINCIPAL ───
 st.title("👗 Boutique Inteligente")
-st.markdown("Bienvenido a la tienda que no solo vende ropa, sino que **sabe qué comprar**.")
+st.markdown("Bienvenido. Por favor selecciona tu perfil.")
 st.markdown("---")
 
-tab_tienda, tab_admin = st.tabs(["🛍️ Ver Tienda", "🧠 Panel Inteligente (Dueño)"])
+# Creamos dos opciones en la barra lateral para separar Cliente y Dueño
+rol = st.sidebar.radio("Ingresa como:", ["🛍️ Cliente", "🔐 Dueño (Administrador)"])
 
-# ─── PESTAÑA 1: TIENDA ───
-with tab_tienda:
-    st.markdown("### Catálogo de Temporada")
+# ═══════════════════════════════════════════════════════════
+# VISTA DEL CLIENTE
+# ═══════════════════════════════════════════════════════════
+if rol == "🛍️ Cliente":
+    st.header("Catálogo de Temporada")
     
-    # Creamos columnas para mostrar los productos
     cols = st.columns(2)
     for index, row in df.iterrows():
         with cols[index % 2]:
@@ -34,8 +35,7 @@ with tab_tienda:
             st.markdown(f"💵 Precio: **${row['precio']}**")
             
             if row["stock"] > 0:
-                if st.button(f"🛒 Comprar {row['producto']}", key=f"btn_{row['id']}"):
-                    # Lógica de compra (restar stock y sumar ventas)
+                if st.button(f"🛒 Comprar", key=f"btn_{row['id']}"):
                     st.session_state.inventario.loc[index, 'stock'] -= 1
                     st.session_state.inventario.loc[index, 'vendidos'] += 1
                     st.success(f"¡Compraste {row['producto']}!")
@@ -43,36 +43,60 @@ with tab_tienda:
             else:
                 st.error("❌ Agotado")
 
-# ─── PESTAÑA 2: EL "CEREBRO" (Panel Sofi Pro) ───
-with tab_admin:
-    st.markdown("### 📊 Análisis Predictivo del Negocio")
-    st.info("Esta sección analiza la tienda en tiempo real para ayudarte a ganar más dinero.")
+# ═══════════════════════════════════════════════════════════
+# VISTA DEL DUEÑO (PROTEGIDA CON CONTRASEÑA)
+# ═══════════════════════════════════════════════════════════
+else:
+    # Contraseña secreta para entrar
+    password = st.text_input("Ingresa la clave de administrador:", type="password")
     
-    # 1. Cálculo de Ganancias
-    df["ganancia_unitaria"] = df["precio"] - df["costo"]
-    df["ganancia_total"] = df["ganancia_unitaria"] * df["vendidos"]
-    total_ingresos = (df["precio"] * df["vendidos"]).sum()
-    total_ganancia = df["ganancia_total"].sum()
-    
-    col_m1, col_m2 = st.columns(2)
-    col_m1.metric("Ingresos Totales", f"${total_ingresos:,.2f}")
-    col_m2.metric("Ganancia Neta", f"${total_ganancia:,.2f}")
-    
-    st.markdown("---")
-    st.markdown("#### 🚨 Alertas de Sofi Pro (IA)")
-    
-    for index, row in df.iterrows():
-        # Alerta 1: Poco Stock
-        if row["stock"] <= 3:
-            st.error(f"⚠️ **¡Alerta de Stock!** Solo te quedan **{row['stock']}** unidades de **{row['producto']}**. Basado en tus ventas, se agotará pronto. Pide más al proveedor.")
-            
-        # Alerta 2: Bajo Margen
-        margen = (row["ganancia_unitaria"] / row["precio"]) * 100
-        if margen < 30:
-            st.warning(f"📉 **Margen Bajo:** **{row['producto']}** solo te deja un {margen:.1f}% de ganancia. Te sugiero subirle el precio a **${row['costo'] * 1.5:.2f}**.")
+    if password == "admin123": # Puedes cambiar esta clave aquí
+        st.success("Acceso concedido. Bienvenido, Dueño.")
+        
+        # --- FORMULARIO PARA SUBIR MERCANCÍA NUEVA ---
+        with st.expander("📦 Ingresar Mercancía Nueva (Haz clic aquí)"):
+            with st.form("nuevo_producto"):
+                st.markdown("Llena los datos de la prenda que acaba de llegar:")
+                col1, col2 = st.columns(2)
+                with col1:
+                    nuevo_nombre = st.text_input("Nombre de la prenda")
+                    nuevo_costo = st.number_input("Costo ($)", min_value=1.0)
+                with col2:
+                    nueva_cantidad = st.number_input("Cantidad que llegó", min_value=1)
+                    nuevo_precio = st.number_input("Precio de venta ($)", min_value=1.0)
+                
+                # Imagen por defecto si no se sube una
+                nueva_img = st.text_input("URL de la foto (Opcional)", value="https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=400")
+                
+                submit_btn = st.form_submit_button("Guardar en Inventario")
+                
+                if submit_btn and nuevo_nombre:
+                    # Crear nueva fila
+                    nuevo_id = st.session_state.inventario['id'].max() + 1
+                    nueva_fila = pd.DataFrame([{
+                        "id": nuevo_id, "producto": nuevo_nombre, "precio": nuevo_precio, 
+                        "costo": nuevo_costo, "stock": nueva_cantidad, "vendidos": 0, "img": nueva_img
+                    }])
+                    # Agregar a la base de datos
+                    st.session_state.inventario = pd.concat([st.session_state.inventario, nueva_fila], ignore_index=True)
+                    st.success("¡Mercancía agregada con éxito!")
+                    st.rerun()
 
-    st.markdown("---")
-    st.markdown("#### 🏆 Productos Más Vendidos")
-    top_ventas = df.sort_values(by="vendidos", ascending=False)[["producto", "vendidos"]]
-    st.dataframe(top_ventas, hide_index=True, use_container_width=True)
-  
+        # --- ANÁLISIS PREDICTIVO ---
+        st.markdown("### 📊 Análisis Financiero (Sofi Pro)")
+        df = st.session_state.inventario
+        df["ganancia_unitaria"] = df["precio"] - df["costo"]
+        total_ganancia = (df["ganancia_unitaria"] * df["vendidos"]).sum()
+        
+        st.metric("Ganancia Neta Total", f"${total_ganancia:,.2f}")
+        
+        st.markdown("#### 🚨 Alertas de la IA")
+        for index, row in df.iterrows():
+            if row["stock"] <= 3:
+                st.error(f"⚠️ **Poco Stock:** Solo quedan {row['stock']} de **{row['producto']}**.")
+            margen = (row["ganancia_unitaria"] / row["precio"]) * 100
+            if margen < 30:
+                st.warning(f"📉 **Margen Bajo:** **{row['producto']}** te deja solo {margen:.1f}%. Súbele el precio.")
+                
+    elif password != "":
+        st.error("Contraseña incorrecta. Acceso denegado.")
